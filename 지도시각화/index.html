@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>주정차 + 상권 시각화</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    #map { width: 100%; height: 95vh; }
+    #controls {
+      position: absolute;
+      top: 20px; left: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      z-index: 1000;
+      max-width: 220px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      cursor: move;
+      user-select: none;
+      transition: all 0.3s ease;
+    }
+    
+    #controls:hover {
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+      transform: translateY(-2px);
+    }
+    
+    #controls h3 {
+      margin: 0 0 15px 0;
+      font-size: 16px;
+      color: #333;
+      text-align: center;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 8px;
+    }
+    
+    label { 
+      font-weight: 600; 
+      margin-right: 5px; 
+      display: block; 
+      margin-top: 12px; 
+      font-size: 13px;
+      color: #555;
+    }
+    
+    select, input[type=range] { margin-bottom: 8px; width: 100%; }
+    .info { font-size: 11px; color: #777; margin-top: 8px; }
+    
+    .checkbox-group {
+      margin-bottom: 12px;
+    }
+    .checkbox-group label {
+      display: block;
+      font-weight: normal;
+      margin: 4px 0;
+      cursor: pointer;
+      font-size: 12px;
+      color: #666;
+      transition: color 0.2s ease;
+    }
+    .checkbox-group label:hover {
+      color: #007bff;
+    }
+    .checkbox-group input[type="checkbox"] {
+      margin-right: 6px;
+      transform: scale(0.9);
+    }
+    
+    .info p {
+      margin: 3px 0;
+      line-height: 1.3;
+    }
+    
+    /* 드래그 중일 때 스타일 */
+    #controls.dragging {
+      opacity: 0.8;
+      transform: scale(1.02);
+    }
+  </style>
+</head>
+<body>
+
+<div id="controls">
+  <h3>수원시 지도 시각화</h3>
+  
+  <label>단속방법:</label>
+  <div class="checkbox-group">
+    <label><input type="checkbox" name="typeFilter" value="고정형" checked> 고정형</label>
+    <label><input type="checkbox" name="typeFilter" value="주행형" checked> 주행형</label>
+    <label><input type="checkbox" name="typeFilter" value="국민신문고" checked> 국민신문고</label>
+    <label><input type="checkbox" name="typeFilter" value="보행" checked> 보행</label>
+    <label><input type="checkbox" name="typeFilter" value="주민신고제" checked> 주민신고제</label>
+    <label><input type="checkbox" name="typeFilter" value="없음"> 없음</label>
+  </div>
+
+  <label>단속 시간대 (0~23시):</label>
+  <input type="range" id="hourSlider" min="0" max="23" value="12" />
+  <span id="hourLabel">12시</span>
+
+  <label>상권 필터:</label>
+  <div class="checkbox-group">
+    <label><input type="checkbox" name="categoryFilter" value="음식점" checked> 음식점</label>
+    <label><input type="checkbox" name="categoryFilter" value="카페" checked> 카페</label>
+    <label><input type="checkbox" name="categoryFilter" value="병원" checked> 병원</label>
+    <label><input type="checkbox" name="categoryFilter" value="은행" checked> 은행</label>
+    <label><input type="checkbox" name="categoryFilter" value="관공서" checked> 관공서</label>
+    <label><input type="checkbox" name="categoryFilter" value="주차장" checked> 주차장</label>
+    <label><input type="checkbox" name="categoryFilter" value="없음"> 없음</label>
+  </div>
+  
+  <div class="info">
+    <p><strong>사용법:</strong></p>
+    <p>• 체크박스로 여러 개 동시 선택 가능</p>
+    <p>• 같은 옵션 다시 클릭 시 해제</p>
+    <p>• "없음" 선택 시 해당 카테고리가 없는 데이터 표시</p>
+    <p>• 마커 클릭 시 상세 정보</p>
+    <p>• 마우스 휠로 확대/축소</p>
+  </div>
+</div>
+
+<div id="map"></div>
+
+<script>
+  // OpenStreetMap으로 지도 초기화
+  const map = L.map('map').setView([37.2636, 127.0286], 12);
+  
+  // OpenStreetMap 타일 레이어 추가
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  
+  let violationMarkers = [];
+  let facilityMarkers = [];
+  
+  // 색상 매핑
+  const typeColors = {
+    "고정형": "#666",
+    "주행형": "#0080FF",
+    "국민신문고": "#FFA500",
+    "보행": "#33CC33",
+    "주민신고제": "#FF4444"
+  };
+  
+  const categoryColors = {
+    "음식점": "red",
+    "카페": "orange",
+    "병원": "blue",
+    "은행": "green",
+    "관공서": "purple",
+    "주차장": "black"
+  };
+  
+  // 필터 요소 연결
+  const typeFilter = document.querySelectorAll('input[name="typeFilter"]');
+  const hourSlider = document.getElementById('hourSlider');
+  const hourLabel = document.getElementById('hourLabel');
+  const categoryFilter = document.querySelectorAll('input[name="categoryFilter"]');
+  
+  console.log('지도 초기화 완료 (OpenStreetMap)');
+  
+  // 드래그 기능 추가
+  let isDragging = false;
+  let dragOffset = { x: 0, y: 0 };
+  
+  const controls = document.getElementById('controls');
+  
+  controls.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
+    
+    isDragging = true;
+    controls.classList.add('dragging');
+    
+    const rect = controls.getBoundingClientRect();
+    dragOffset.x = e.clientX - rect.left;
+    dragOffset.y = e.clientY - rect.top;
+    
+    e.preventDefault();
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    
+    const x = e.clientX - dragOffset.x;
+    const y = e.clientY - dragOffset.y;
+    
+    // 화면 경계 내에서만 이동
+    const maxX = window.innerWidth - controls.offsetWidth;
+    const maxY = window.innerHeight - controls.offsetHeight;
+    
+    controls.style.left = Math.max(0, Math.min(x, maxX)) + 'px';
+    controls.style.top = Math.max(0, Math.min(y, maxY)) + 'px';
+  });
+  
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      controls.classList.remove('dragging');
+    }
+  });
+  
+  // 데이터 로드
+  Promise.all([
+    fetch("data/violations.json").then(r => {
+      console.log('violations.json 응답:', r.status);
+      return r.json();
+    }).catch(e => {
+      console.error('violations.json 로딩 오류:', e);
+      return [];
+    }),
+    fetch("data/facilities.json").then(r => {
+      console.log('facilities.json 응답:', r.status);
+      return r.json();
+    }).catch(e => {
+      console.error('facilities.json 로딩 오류:', e);
+      return [];
+    })
+  ]).then(([violations, facilities]) => {
+    console.log('데이터 로딩 완료:', { violations: violations.length, facilities: facilities.length });
+    
+    // 렌더 함수 등록
+    render(violations, facilities);
+  
+    // 필터 변경 감지
+    typeFilter.forEach(checkbox => {
+      checkbox.addEventListener("change", () => {
+        console.log('단속방법 필터 변경:', checkbox.value, checkbox.checked);
+        render(violations, facilities);
+      });
+    });
+    
+    categoryFilter.forEach(checkbox => {
+      checkbox.addEventListener("change", () => {
+        console.log('상권 필터 변경:', checkbox.value, checkbox.checked);
+        render(violations, facilities);
+      });
+    });
+    
+    hourSlider.addEventListener("input", () => {
+      hourLabel.textContent = `${hourSlider.value}시`;
+      console.log('시간대 변경:', hourSlider.value);
+      render(violations, facilities);
+    });
+  });
+  
+  function render(violations, facilities) {
+    console.log('렌더링 시작');
+    const selectedTypes = Array.from(typeFilter).filter(checkbox => checkbox.checked).map(checkbox => checkbox.value);
+    const selectedCats = Array.from(categoryFilter).filter(checkbox => checkbox.checked).map(checkbox => checkbox.value);
+    const hour = parseInt(hourSlider.value);
+    
+    console.log('선택된 필터:', { selectedTypes, selectedCats, hour });
+  
+    // 이전 마커 제거
+    violationMarkers.forEach(m => map.removeLayer(m));
+    facilityMarkers.forEach(m => map.removeLayer(m));
+    violationMarkers = [];
+    facilityMarkers = [];
+  
+    // 단속 시각화
+    if (violations && violations.length > 0) {
+      violations.forEach(d => {
+        if (!selectedTypes.includes(d.type)) return;
+        if (parseInt(d.hour) !== hour) return;
+
+        // 모든 단속방식에 대해 크기 고정, 색상 진하기만 조절
+        const intensity = Math.min(1, d.count / 10);
+        const color = typeColors[d.type] || "#999";
+        const radius = 12; // 모든 마커 동일한 크기로 고정
+        const fillOpacity = 0.2 + intensity * 0.8; // 0.2 ~ 1.0 범위
+        
+        const marker = L.circleMarker([d.lat, d.lon], {
+          radius: radius, // 크기 고정
+          fillColor: color,
+          color: color,
+          weight: 1.5, // 테두리 두께
+          opacity: 1,
+          fillOpacity: fillOpacity // 색상 진하기만 조절
+        }).addTo(map);
+        
+        // 툴팁 추가
+        marker.bindPopup(`
+          <strong>${d.type}</strong><br>
+          시간: ${d.hour}시<br>
+          단속건수: ${d.count}건<br>
+          위치: ${d.lat.toFixed(4)}, ${d.lon.toFixed(4)}
+        `);
+        
+        violationMarkers.push(marker);
+      });
+      console.log('단속 마커 생성:', violationMarkers.length);
+    }
+  
+    // 상권 시각화
+    if (facilities && facilities.length > 0) {
+      facilities.forEach(d => {
+        // "없음" 옵션이 선택된 경우 처리
+        if (selectedCats.includes("없음")) {
+          // 모든 카테고리가 0인 경우 "없음"으로 표시
+          const hasAnyCategory = selectedCats.filter(cat => cat !== "없음").some(cat => d[cat] && d[cat] > 0);
+          if (!hasAnyCategory) {
+            const marker = L.circleMarker([d.lat, d.lng], {
+              radius: 8,
+              fillColor: "gray",
+              color: "gray",
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.3
+            }).addTo(map);
+            
+            marker.bindPopup(`
+              <strong>상권 없음</strong><br>
+              도로: ${d.road}<br>
+              모든 카테고리: 0개<br>
+              위치: ${d.lat.toFixed(4)}, ${d.lng.toFixed(4)}
+            `);
+            
+            facilityMarkers.push(marker);
+          }
+        }
+        
+        // 일반 카테고리 처리
+        selectedCats.filter(cat => cat !== "없음").forEach(category => {
+          if (d[category] && d[category] > 0) {
+            const color = categoryColors[category] || "gray";
+            const radius = 10 + Math.min(d[category] / 10, 20);
+            
+            const marker = L.circleMarker([d.lat, d.lng], {
+              radius: radius,
+              fillColor: color,
+              color: color,
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.4
+            }).addTo(map);
+            
+            // 툴팁 추가
+            marker.bindPopup(`
+              <strong>${category}</strong><br>
+              도로: ${d.road}<br>
+              개수: ${d[category]}개<br>
+              위치: ${d.lat.toFixed(4)}, ${d.lng.toFixed(4)}
+            `);
+            
+            facilityMarkers.push(marker);
+          }
+        });
+      });
+      console.log('상권 마커 생성:', facilityMarkers.length);
+    }
+    
+    console.log('렌더링 완료');
+  }
+</script>
+
+</body>
+</html>
