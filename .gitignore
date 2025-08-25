@@ -1,0 +1,9 @@
+Hotspot_analysis/*.csv
+Hotspot_analysis/map_cache.json
+Hotspot_analysis/map_progress.csv
+__pycache__/
+*.pyc
+*.log
+*.tmp
+.vscode/
+Hotspot_analysis/config.js
