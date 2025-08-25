@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>Gi* Hotspot Map (Kakao)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body, #map { height: 100%; margin: 0; }
+    .panel {
+      position: absolute; z-index: 10; top: 10px; left: 10px;
+      background: rgba(255,255,255,0.96); padding: 10px 12px; border-radius: 10px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; font-size: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    }
+    .panel .row { margin: 6px 0; }
+    .legend {
+      position: absolute; z-index: 10; bottom: 16px; left: 10px;
+      background: rgba(255,255,255,0.96); padding: 10px 12px; border-radius: 10px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; font-size: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    }
+    .legend-bar {
+      width: 220px; height: 10px; background: linear-gradient(90deg,#2c7bb6,#f7f7f7,#d7191c);
+      border-radius: 4px; margin: 6px 0 4px;
+    }
+    .muted { color: #666; }
+    .card {
+      min-width: 260px; max-width: 320px;
+      background: #fff; border-radius: 12px; padding: 12px 14px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18); border: 1px solid rgba(0,0,0,0.08);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; font-size: 13px;
+    }
+    .card h3 { margin: 0 0 6px; font-size: 16px; line-height: 1.2; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; vertical-align:middle; }
+    .badge.hot { background:#fbe3e3; color:#b30000; border:1px solid #f4b9b9; }
+    .badge.cold { background:#e3eefb; color:#004b9a; border:1px solid #b9d0f4; }
+    .badge.neutral { background:#eee; color:#555; border:1px solid #ddd; }
+    .kv { margin: 8px 0 0; color: #333; }
+    .kv b { display:inline-block; min-width: 72px; }
+    .hint { margin-top: 6px; color:#666; font-size:12px; }
+    .close-btn {
+      position:absolute; top:-8px; right:-8px; width:22px; height:22px; border-radius:50%;
+      background:#fff; border:1px solid rgba(0,0,0,0.15); cursor:pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      display:flex; align-items:center; justify-content:center; font-weight:700; color:#444;
+    }
+  </style>
+  <!-- services 포함 -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=&libraries=services"></script>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="panel">
+    <div class="row"><b>지표 선택</b></div>
+    <div class="row">
+      <label><input type="radio" name="metric" value="AMT" checked> AMT Gi*</label>
+      <label style="margin-left:10px;"><input type="radio" name="metric" value="NOC"> NOC Gi*</label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="sigOnly"> p ≤ 0.05만 표시</label>
+    </div>
+    <div class="row muted">색: 파랑(Cold) ↔ 회색(유의X) ↔ 빨강(Hot), 크기: |z| 비례</div>
+  </div>
+
+  <div class="legend">
+    <div><b>Gi* Z-score</b></div>
+    <div class="legend-bar"></div>
+    <div style="display:flex; justify-content:space-between; width:220px;">
+      <span id="zmin">-</span><span>0</span><span id="zmax">-</span>
+    </div>
+  </div>
+
+  <script>
+    const map = new kakao.maps.Map(document.getElementById('map'), {
+      center: new kakao.maps.LatLng(37.27, 127.01),
+      level: 6
+    });
+    const geocoder = new kakao.maps.services.Geocoder();
+    const places = new kakao.maps.services.Places();
+
+    let features = [];
+    let overlaysAMT = [], overlaysNOC = [];
+    let infoOverlay = null;
+    const addrCache = new Map();
+    const poiCache = new Map();
+    const zStats = { AMT: { z5:-1, z95:1, az95:1 }, NOC: { z5:-1, z95:1, az95:1 } };
+    const filename = "suwon_hotspots_gi_unified.geojson";
+
+    function hexToRgb(hex){ const h=hex.replace('#',''); return {r:parseInt(h.slice(0,2),16), g:parseInt(h.slice(2,4),16), b:parseInt(h.slice(4,6),16)};}
+    function lerpColor(a,b,t){ const ca=hexToRgb(a), cb=hexToRgb(b); const r=Math.round(ca.r+(cb.r-ca.r)*t), g=Math.round(ca.g+(cb.g-ca.g)*t), bl=Math.round(ca.b+(cb.b-ca.b)*t); return `rgb(${r},${g},${bl})`; }
+    function quantile(arr, q){ const a = arr.filter(Number.isFinite).sort((x,y)=>x-y); if (!a.length) return 0; const pos=(a.length-1)*q, base=Math.floor(pos), rest=pos-base; return a[base]+(a[base+1]!==undefined?rest*(a[base+1]-a[base]):0); }
+
+    function colorByZP(z, p, metric){
+      if (!Number.isFinite(z) || !Number.isFinite(p)) return '#cccccc';
+      if (p > 0.05) return '#bbbbbb';
+      const {z5,z95} = zStats[metric];
+      const t = (z - z5) / (z95 - z5);
+      const u = Math.max(0, Math.min(1, t));
+      if (u < 0.5) return lerpColor('#2c7bb6','#f7f7f7', u/0.5);
+      return lerpColor('#f7f7f7','#d7191c',(u-0.5)/0.5);
+    }
+    function radiusPxByZ(z, metric){
+      if (!Number.isFinite(z)) return 4;
+      const az = Math.abs(z), cap = zStats[metric].az95 || 1;
+      const t = Math.max(0, Math.min(1, az / cap));
+      return 5 + (22 - 5) * t;
+    }
+
+    function makeDotOverlay(lat, lon, color, radiusPx, onClick){
+      const el = document.createElement('div');
+      el.style.width = `${radiusPx*2}px`;
+      el.style.height = `${radiusPx*2}px`;
+      el.style.borderRadius = '50%';
+      el.style.background = color;
+      el.style.opacity = '0.78';
+      el.style.border = '1px solid rgba(0,0,0,0.3)';
+      el.style.boxSizing = 'border-box';
+      el.style.cursor = 'pointer';
+
+      const overlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(lat, lon),
+        content: el,
+        yAnchor: 0.5, xAnchor: 0.5
+      });
+      el.addEventListener('click', onClick);
+      return overlay;
+    }
+
+    function getMetric(){ return document.querySelector('input[name="metric"]:checked').value; }
+
+    function narrative(props, metric, placeNameOrAddr){
+      const isAMT = metric === 'AMT';
+      const z = isAMT ? Number(props.amt_z) : Number(props.noc_z);
+      const p = isAMT ? Number(props.amt_p) : Number(props.noc_p);
+      const label = isAMT ? props.amt_label : props.noc_label;
+
+      let comp;
+      if (!Number.isFinite(p) || p > 0.05) comp = '통계적으로 유의하지 않습니다';
+      else if (z > 0) comp = '주변부보다 더 높은 지역입니다';
+      else comp = '주변부보다 더 낮은 지역입니다';
+
+      const badgeClass = (!Number.isFinite(p) || p > 0.05) ? 'neutral' : (z > 0 ? 'hot' : 'cold');
+      const metricKo = isAMT ? '매출(AMT)' : '건수(NOC)';
+
+      return `
+        <div class="card">
+          <button class="close-btn" onclick="window.__closeInfoOverlay()">×</button>
+          <h3>${placeNameOrAddr || '위치 정보 없음'} <span class="badge ${badgeClass}">${label}</span></h3>
+          <div>${metricKo} 기준으로 <b>${comp}</b>.</div>
+          <div class="kv"><b>z-score</b> ${z.toFixed(3)}<br><b>p-value</b> ${p.toFixed(3)}</div>
+          <div class="kv"><b>AMT</b> ${Number(props.AMT).toLocaleString()}<br><b>NOC</b> ${Number(props.NOC).toLocaleString()}</div>
+          <div class="hint">* p≤0.05만 유의. 회색은 비유의 지점입니다.</div>
+        </div>
+      `;
+    }
+
+    const geocoderObj = new kakao.maps.services.Geocoder();
+    const placesObj = new kakao.maps.services.Places();
+
+    function keyOf(lat, lon){ return `${lat.toFixed(6)},${lon.toFixed(6)}`; }
+    function getAddress(lat, lon){
+      return new Promise(resolve=>{
+        const k = keyOf(lat, lon);
+        if (addrCache.has(k)) return resolve(addrCache.get(k));
+        geocoderObj.coord2Address(lon, lat, (res, status)=>{
+          let name = null;
+          if (status === kakao.maps.services.Status.OK && res && res.length){
+            const r = res[0];
+            name = (r.road_address && r.road_address.address_name) || (r.address && r.address.address_name) || null;
+          }
+          addrCache.set(k, name);
+          resolve(name);
+        });
+      });
+    }
+    function getNicePlaceOrAddress(lat, lon){
+      return new Promise(resolve=>{
+        const k = keyOf(lat, lon);
+        if (poiCache.has(k)) return resolve(poiCache.get(k));
+        const loc = new kakao.maps.LatLng(lat, lon);
+        placesObj.keywordSearch('역 출구', (res, status)=>{
+          function near(p){ const dlat=Math.abs(lat-p.y), dlon=Math.abs(lon-p.x); return dlat<0.002 && dlon<0.002; }
+          if (status === kakao.maps.services.Status.OK && res && res.length){
+            const cand = res.find(p=>near(p));
+            if (cand){ poiCache.set(k, cand.place_name); return resolve(cand.place_name); }
+          }
+          placesObj.keywordSearch('역', (res2, status2)=>{
+            if (status2 === kakao.maps.services.Status.OK && res2 && res2.length){
+              const cand2 = res2.find(p=>near(p));
+              if (cand2){ poiCache.set(k, cand2.place_name); return resolve(cand2.place_name); }
+            }
+            getAddress(lat, lon).then(addr=>{ poiCache.set(k, addr); resolve(addr); });
+          }, {location: loc, radius: 200});
+        }, {location: loc, radius: 200});
+      });
+    }
+
+    window.__closeInfoOverlay = function(){
+      if (infoOverlay){ infoOverlay.setMap(null); infoOverlay = null; }
+    };
+    function openInfo(lat, lon, props, metric){
+      getNicePlaceOrAddress(lat, lon).then(name=>{
+        const content = narrative(props, metric, name);
+        if (infoOverlay) infoOverlay.setMap(null);
+        infoOverlay = new kakao.maps.CustomOverlay({
+          position: new kakao.maps.LatLng(lat, lon),
+          content: content,
+          yAnchor: 1.05, xAnchor: 0.5
+        });
+        infoOverlay.setMap(map);
+      }).catch(err=>console.error('info overlay error', err));
+    }
+
+    function buildLayers(){
+      const zA = features.map(f => Number(f.properties.amt_z)).filter(Number.isFinite);
+      const zN = features.map(f => Number(f.properties.noc_z)).filter(Number.isFinite);
+      zStats.AMT.z5 = quantile(zA, 0.05);  zStats.AMT.z95 = quantile(zA, 0.95);
+      zStats.NOC.z5 = quantile(zN, 0.05);  zStats.NOC.z95 = quantile(zN, 0.95);
+      zStats.AMT.az95 = quantile(zA.map(Math.abs), 0.95);
+      zStats.NOC.az95 = quantile(zN.map(Math.abs), 0.95);
+
+      const metric = getMetric();
+      document.getElementById('zmin').textContent = zStats[metric].z5.toFixed(2);
+      document.getElementById('zmax').textContent = zStats[metric].z95.toFixed(2);
+
+      overlaysAMT.forEach(o => o.setMap(null)); overlaysAMT = [];
+      overlaysNOC.forEach(o => o.setMap(null)); overlaysNOC = [];
+
+      const sigOnly = document.getElementById('sigOnly').checked;
+
+      features.forEach(f => {
+        const p = f.properties;
+        const lat = Number(p.lat ?? f.geometry.coordinates[1]);
+        const lon = Number(p.lon ?? f.geometry.coordinates[0]);
+
+        if (!sigOnly || Number(p.amt_p) <= 0.05){
+          const color = colorByZP(Number(p.amt_z), Number(p.amt_p), 'AMT');
+          const rad = radiusPxByZ(Number(p.amt_z), 'AMT');
+          const ov = makeDotOverlay(lat, lon, color, rad, () => openInfo(lat, lon, p, 'AMT'));
+          overlaysAMT.push(ov);
+        }
+        if (!sigOnly || Number(p.noc_p) <= 0.05){
+          const color = colorByZP(Number(p.noc_z), Number(p.noc_p), 'NOC');
+          const rad = radiusPxByZ(Number(p.noc_z), 'NOC');
+          const ov = makeDotOverlay(lat, lon, color, rad, () => openInfo(lat, lon, p, 'NOC'));
+          overlaysNOC.push(ov);
+        }
+      });
+
+      applyVisibility();
+      fitBounds();
+    }
+
+    function applyVisibility(){
+      const m = getMetric();
+      overlaysAMT.forEach(o => o.setMap(m === 'AMT' ? map : null));
+      overlaysNOC.forEach(o => o.setMap(m === 'NOC' ? map : null));
+      document.getElementById('zmin').textContent = zStats[m].z5.toFixed(2);
+      document.getElementById('zmax').textContent = zStats[m].z95.toFixed(2);  /* ← 오타 수정: 여분 괄호 제거 */
+    }
+
+    function fitBounds(){
+      if (!features.length) return;
+      const b = new kakao.maps.LatLngBounds();
+      features.forEach(f => b.extend(new kakao.maps.LatLng(f.geometry.coordinates[1], f.geometry.coordinates[0])));
+      map.setBounds(b);
+    }
+
+    document.addEventListener('change', (e) => {
+      if (e.target.name === 'metric' || e.target.id === 'sigOnly'){ buildLayers(); }
+    });
+
+    fetch(filename)
+      .then(r => {
+        if (!r.ok) throw new Error('GeoJSON fetch failed: ' + r.status);
+        return r.json();
+      })
+      .then(json => {
+        features = (json.features || []).map(feat => {
+          const p = feat.properties || {};
+          p.lat = Number(p.lat ?? feat.geometry.coordinates[1]);
+          p.lon = Number(p.lon ?? feat.geometry.coordinates[0]);
+          p.AMT = Number(p.AMT); p.NOC = Number(p.NOC);
+          p.amt_z = Number(p.amt_z); p.amt_p = Number(p.amt_p);
+          p.noc_z = Number(p.noc_z); p.noc_p = Number(p.noc_p);
+          feat.properties = p;
+          return feat;
+        });
+        buildLayers();
+      })
+      .catch(err => {
+        console.error(err);
+        alert('데이터 로드 실패: 콘솔을 확인하세요.');
+      });
+  </script>
+</body>
+</html>
