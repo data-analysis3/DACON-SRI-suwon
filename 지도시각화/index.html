@@ -9,18 +9,41 @@
     #map { width: 100%; height: 95vh; }
     #controls {
       position: absolute;
-      top: 20px; left: 20px;
+      top: 20px;
+      left: 20px;
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(10px);
-      padding: 15px;
+      padding: 20px;
       border-radius: 15px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-      z-index: 1000;
-      max-width: 220px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.2);
       cursor: move;
       user-select: none;
-      transition: all 0.3s ease;
+      z-index: 1000;
+      min-width: 280px;
+      max-width: 600px;
+    }
+    
+    /* 필터 컬럼 레이아웃 */
+    .filter-column {
+      display: inline-block;
+      vertical-align: top;
+      width: 48%;
+      margin-right: 2%;
+    }
+    
+    .filter-column:last-child {
+      margin-right: 0;
+    }
+    
+    /* 모바일 반응형 */
+    @media (max-width: 768px) {
+      .filter-column {
+        display: block;
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 15px;
+      }
     }
     
     #controls:hover {
@@ -51,23 +74,169 @@
     .info { font-size: 11px; color: #777; margin-top: 8px; }
     
     .checkbox-group {
-      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-bottom: 10px;
     }
+    
     .checkbox-group label {
-      display: block;
-      font-weight: normal;
-      margin: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      padding: 2px 0;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+      margin: 0;
+      cursor: pointer;
+    }
+    
+    .filter-group {
+      margin-bottom: 15px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .filter-group h4 {
+      margin: 0 0 8px 0;
+      font-size: 13px;
+      color: #333;
+      font-weight: 600;
+    }
+    
+    /* 모달 버튼 스타일 */
+    .modal-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      margin: 5px;
+      border-radius: 6px;
       cursor: pointer;
       font-size: 12px;
-      color: #666;
-      transition: color 0.2s ease;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+    
+    .modal-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    /* 모달 스타일 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      backdrop-filter: blur(5px);
+    }
+    
+    .modal-content {
+      background-color: white;
+      margin: 5% auto;
+      padding: 0;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      animation: modalSlideIn 0.3s ease-out;
+    }
+    
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .modal-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px 12px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-header h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .close {
+      color: white;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+    }
+    
+    .close:hover {
+      opacity: 0.7;
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    /* 범례 스타일 */
+    .legend {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
+    }
+    
+    .legend h4 {
+      margin: 0 0 15px 0;
+      font-size: 14px;
+      color: #495057;
+      font-weight: 600;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 12px;
+      color: #6c757d;
+    }
+    
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      margin-right: 10px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    
+    .legend-info {
+      font-style: italic;
+      color: #868e96;
+      font-size: 11px;
+      margin-top: 5px;
+    }
+    
     .checkbox-group label:hover {
       color: #007bff;
-    }
-    .checkbox-group input[type="checkbox"] {
-      margin-right: 6px;
-      transform: scale(0.9);
     }
     
     .info p {
@@ -85,48 +254,128 @@
 <body>
 
 <div id="controls">
-  <h3>수원시 지도 시각화</h3>
+  <h3>지도 시각화</h3>
   
-  <label>단속방법:</label>
-  <div class="checkbox-group">
-    <label><input type="checkbox" name="typeFilter" value="고정형" checked> 고정형</label>
-    <label><input type="checkbox" name="typeFilter" value="주행형" checked> 주행형</label>
-    <label><input type="checkbox" name="typeFilter" value="국민신문고" checked> 국민신문고</label>
-    <label><input type="checkbox" name="typeFilter" value="보행" checked> 보행</label>
-    <label><input type="checkbox" name="typeFilter" value="주민신고제" checked> 주민신고제</label>
-    <label><input type="checkbox" name="typeFilter" value="없음"> 없음</label>
-  </div>
-
-  <label>단속 시간대 (0~23시):</label>
-  <input type="range" id="hourSlider" min="0" max="23" value="12" />
-  <span id="hourLabel">12시</span>
-
-  <label>상권 필터:</label>
-  <div class="checkbox-group">
-    <label><input type="checkbox" name="categoryFilter" value="음식점" checked> 음식점</label>
-    <label><input type="checkbox" name="categoryFilter" value="카페" checked> 카페</label>
-    <label><input type="checkbox" name="categoryFilter" value="병원" checked> 병원</label>
-    <label><input type="checkbox" name="categoryFilter" value="은행" checked> 은행</label>
-    <label><input type="checkbox" name="categoryFilter" value="관공서" checked> 관공서</label>
-    <label><input type="checkbox" name="categoryFilter" value="주차장" checked> 주차장</label>
-    <label><input type="checkbox" name="categoryFilter" value="없음"> 없음</label>
+  <!-- 왼쪽 필터 그룹 -->
+  <div class="filter-column">
+    <div class="filter-group">
+      <h4>단속 방법</h4>
+      <div class="checkbox-group">
+        <label><input type="checkbox" name="typeFilter" value="고정형" checked> 고정형</label>
+        <label><input type="checkbox" name="typeFilter" value="주행형" checked> 주행형</label>
+        <label><input type="checkbox" name="typeFilter" value="국민신문고" checked> 국민신문고</label>
+        <label><input type="checkbox" name="typeFilter" value="주민신고제" checked> 주민신고제</label>
+        <label><input type="checkbox" name="typeFilter" value="보행" checked> 보행</label>
+        <label><input type="checkbox" name="typeFilter" value="없음"> 없음</label>
+      </div>
+    </div>
+    
+    <div class="filter-group">
+      <h4>상권 분류</h4>
+      <div class="checkbox-group">
+        <label><input type="checkbox" name="categoryFilter" value="음식점" checked> 음식점</label>
+        <label><input type="checkbox" name="categoryFilter" value="카페" checked> 카페</label>
+        <label><input type="checkbox" name="categoryFilter" value="은행" checked> 은행</label>
+        <label><input type="checkbox" name="categoryFilter" value="병원" checked> 병원</label>
+      </div>
+    </div>
   </div>
   
-  <div class="info">
-    <p><strong>사용법:</strong></p>
-    <p>• 체크박스로 여러 개 동시 선택 가능</p>
-    <p>• 같은 옵션 다시 클릭 시 해제</p>
-    <p>• "없음" 선택 시 해당 카테고리가 없는 데이터 표시</p>
-    <p>• 마커 클릭 시 상세 정보</p>
-    <p>• 마우스 휠로 확대/축소</p>
+  <!-- 오른쪽 필터 그룹 -->
+  <div class="filter-column">
+    <div class="filter-group">
+      <h4>상권 분류 (계속)</h4>
+      <div class="checkbox-group">
+        <label><input type="checkbox" name="categoryFilter" value="관공서" checked> 관공서</label>
+        <label><input type="checkbox" name="categoryFilter" value="주차장" checked> 주차장</label>
+        <label><input type="checkbox" name="categoryFilter" value="총합" checked> 총합</label>
+        <label><input type="checkbox" name="categoryFilter" value="없음"> 없음</label>
+      </div>
+    </div>
+    
+    <div class="filter-group">
+      <h4>GI Score 분석</h4>
+      <button id="amtModalBtn" class="modal-btn">AMT Z-Score</button>
+      <button id="nocModalBtn" class="modal-btn">NOC Z-Score</button>
+    </div>
+    
+    <div class="filter-group">
+      <h4>시간대</h4>
+      <input type="range" id="hourSlider" min="0" max="23" value="12">
+      <span id="hourLabel">12시</span>
+    </div>
   </div>
 </div>
 
 <div id="map"></div>
 
+<!-- AMT Z-Score 모달 -->
+<div id="amtModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>AMT Z-Score 분석</h3>
+      <span class="close" id="amtClose">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div class="checkbox-group">
+        <label><input type="checkbox" name="amtFilter" value="amt_z" checked> AMT Z-Score 표시</label>
+      </div>
+      <div class="legend">
+        <h4>색상 범례</h4>
+        <div class="legend-item">
+          <span class="legend-color" style="background: #d73027;"></span>
+          <span>Hot (양수 Z-Score)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color" style="background: #1e3a8a;"></span>
+          <span>Cold (음수 Z-Score)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-info">투명도: 값이 클수록 진하게</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NOC Z-Score 모달 -->
+<div id="nocModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>NOC Z-Score 분석</h3>
+      <span class="close" id="nocClose">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div class="checkbox-group">
+        <label><input type="checkbox" name="nocFilter" value="noc_z" checked> NOC Z-Score 표시</label>
+      </div>
+      <div class="legend">
+        <h4>색상 범례</h4>
+        <div class="legend-item">
+          <span class="legend-color" style="background: #d73027;"></span>
+          <span>Hot (양수 Z-Score)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color" style="background: #1e3a8a;"></span>
+          <span>Cold (음수 Z-Score)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-info">투명도: 값이 클수록 진하게</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   // OpenStreetMap으로 지도 초기화
   const map = L.map('map').setView([37.2636, 127.0286], 12);
+
+  // pane 생성: 단속 마커는 위에, 상권 마커는 아래에 표시(추가)
+  map.createPane('violationPane');
+  map.getPane('violationPane').style.zIndex = 650; // 더 높은 값
+  map.createPane('facilityPane');
+  map.getPane('facilityPane').style.zIndex = 600; // 더 낮은 값
   
   // OpenStreetMap 타일 레이어 추가
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -146,12 +395,13 @@
   };
   
   const categoryColors = {
-    "음식점": "red",
-    "카페": "orange",
+    "음식점": "blue",
+    "카페": "blue",
     "병원": "blue",
-    "은행": "green",
-    "관공서": "purple",
-    "주차장": "black"
+    "은행": "blue",
+    "관공서": "blue",
+    "주차장": "blue",
+    "총합": "purple"
   };
   
   // 필터 요소 연결
@@ -159,8 +409,55 @@
   const hourSlider = document.getElementById('hourSlider');
   const hourLabel = document.getElementById('hourLabel');
   const categoryFilter = document.querySelectorAll('input[name="categoryFilter"]');
+  const giFilter = document.querySelectorAll('input[name="giFilter"]');
+  
+  // 모달 관련 요소들
+  const amtModal = document.getElementById('amtModal');
+  const nocModal = document.getElementById('nocModal');
+  const amtModalBtn = document.getElementById('amtModalBtn');
+  const nocModalBtn = document.getElementById('nocModalBtn');
+  const amtClose = document.getElementById('amtClose');
+  const nocClose = document.getElementById('nocClose');
+  const amtFilter = document.querySelectorAll('input[name="amtFilter"]');
+  const nocFilter = document.querySelectorAll('input[name="nocFilter"]');
   
   console.log('지도 초기화 완료 (OpenStreetMap)');
+  
+  // 모달 열기/닫기 이벤트
+  amtModalBtn.addEventListener('click', () => {
+    amtModal.style.display = 'block';
+  });
+  
+  nocModalBtn.addEventListener('click', () => {
+    nocModal.style.display = 'block';
+  });
+  
+  amtClose.addEventListener('click', () => {
+    amtModal.style.display = 'none';
+  });
+  
+  nocClose.addEventListener('click', () => {
+    nocModal.style.display = 'none';
+  });
+  
+  // 모달 외부 클릭 시 닫기
+  window.addEventListener('click', (event) => {
+    if (event.target === amtModal) {
+      amtModal.style.display = 'none';
+    }
+    if (event.target === nocModal) {
+      nocModal.style.display = 'none';
+    }
+  });
+  
+  // 모달 내부 클릭 시 이벤트 전파 방지
+  amtModal.querySelector('.modal-content').addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
+  
+  nocModal.querySelector('.modal-content').addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
   
   // 드래그 기능 추가
   let isDragging = false;
@@ -217,48 +514,182 @@
     }).catch(e => {
       console.error('facilities.json 로딩 오류:', e);
       return [];
+    }),
+    // GI Score 데이터 추가
+    fetch("data/suwon_hotspots_gi_scores.csv").then(r => {
+      console.log('suwon_hotspots_gi_scores.csv 응답:', r.status);
+      return r.text();
+    }).then(csvText => {
+      // CSV를 파싱하여 JSON으로 변환
+      const lines = csvText.split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      const data = [];
+      
+      console.log('CSV 헤더:', headers);
+      console.log('CSV 헤더 개수:', headers.length);
+      console.log('CSV 첫 번째 행:', lines[1]);
+      
+      for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim()) {
+          // 더 안전한 CSV 파싱 - 쉼표가 포함된 데이터 고려
+          const values = [];
+          let current = '';
+          let inQuotes = false;
+          
+          for (let j = 0; j < lines[i].length; j++) {
+            const char = lines[i][j];
+            
+            if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              values.push(current.trim());
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          values.push(current.trim()); // 마지막 값 추가
+          
+          console.log(`행 ${i} 파싱된 값들:`, values);
+          console.log(`행 ${i} 값 개수:`, values.length);
+          
+          const row = {};
+          
+          headers.forEach((header, index) => {
+            if (values[index] !== undefined && values[index] !== '') {
+              if (header === 'lat' || header === 'lon' || header === 'amt_z' || header === 'noc_z') {
+                row[header] = parseFloat(values[index]);
+              } else {
+                row[header] = values[index];
+              }
+            }
+          });
+          
+          // 디버깅: 첫 번째 행의 데이터 확인
+          if (i === 1) {
+            console.log('첫 번째 행 파싱 결과:', row);
+            console.log('noc_label 값:', row.noc_label);
+            console.log('amt_label 값:', row.amt_label);
+            console.log('모든 헤더에 대한 값:');
+            headers.forEach(header => {
+              console.log(`${header}: "${row[header]}"`);
+            });
+          }
+          
+          data.push(row);
+        }
+      }
+      
+      console.log('GI Score 데이터 파싱 완료:', data.length, '개');
+      console.log('샘플 데이터 (처음 3개):', data.slice(0, 3));
+      return data;
+    }).catch(e => {
+      console.error('suwon_hotspots_gi_scores.csv 로딩 오류:', e);
+      return [];
     })
-  ]).then(([violations, facilities]) => {
-    console.log('데이터 로딩 완료:', { violations: violations.length, facilities: facilities.length });
+  ]).then(([violations, facilities, giScores]) => {
+    console.log('데이터 로딩 완료:', { 
+      violations: violations.length, 
+      facilities: facilities.length, 
+      giScores: giScores.length 
+    });
     
     // 렌더 함수 등록
-    render(violations, facilities);
+    render(violations, facilities, giScores);
   
     // 필터 변경 감지
     typeFilter.forEach(checkbox => {
       checkbox.addEventListener("change", () => {
         console.log('단속방법 필터 변경:', checkbox.value, checkbox.checked);
-        render(violations, facilities);
+        
+        // "없음"이 체크되면 나머지 모두 해제
+        if (checkbox.value === "없음" && checkbox.checked) {
+          typeFilter.forEach(cb => {
+            if (cb !== checkbox) {
+              cb.checked = false;
+            }
+          });
+        }
+        // 다른 항목이 체크되면 "없음" 해제
+        else if (checkbox.value !== "없음" && checkbox.checked) {
+          const noneCheckbox = Array.from(typeFilter).find(cb => cb.value === "없음");
+          if (noneCheckbox) {
+            noneCheckbox.checked = false;
+          }
+        }
+        
+        render(violations, facilities, giScores);
       });
     });
     
     categoryFilter.forEach(checkbox => {
       checkbox.addEventListener("change", () => {
         console.log('상권 필터 변경:', checkbox.value, checkbox.checked);
-        render(violations, facilities);
+        
+        // "없음"이 체크되면 나머지 모두 해제
+        if (checkbox.value === "없음" && checkbox.checked) {
+          categoryFilter.forEach(cb => {
+            if (cb !== checkbox) {
+              cb.checked = false;
+            }
+          });
+        }
+        // 다른 항목이 체크되면 "없음" 해제
+        else if (checkbox.value !== "없음" && checkbox.checked) {
+          const noneCheckbox = Array.from(categoryFilter).find(cb => cb.value === "없음");
+          if (noneCheckbox) {
+            noneCheckbox.checked = false;
+          }
+        }
+        
+        render(violations, facilities, giScores);
+      });
+    });
+    
+    // AMT 필터 변경 감지
+    amtFilter.forEach(checkbox => {
+      checkbox.addEventListener("change", () => {
+        console.log('AMT 필터 변경:', checkbox.value, checkbox.checked);
+        render(violations, facilities, giScores);
+      });
+    });
+    
+    // NOC 필터 변경 감지
+    nocFilter.forEach(checkbox => {
+      checkbox.addEventListener("change", () => {
+        console.log('NOC 필터 변경:', checkbox.value, checkbox.checked);
+        render(violations, facilities, giScores);
       });
     });
     
     hourSlider.addEventListener("input", () => {
       hourLabel.textContent = `${hourSlider.value}시`;
       console.log('시간대 변경:', hourSlider.value);
-      render(violations, facilities);
+      render(violations, facilities, giScores);
     });
   });
   
-  function render(violations, facilities) {
+  function render(violations, facilities, giScores) {
     console.log('렌더링 시작');
     const selectedTypes = Array.from(typeFilter).filter(checkbox => checkbox.checked).map(checkbox => checkbox.value);
     const selectedCats = Array.from(categoryFilter).filter(checkbox => checkbox.checked).map(checkbox => checkbox.value);
+    const selectedAmt = Array.from(amtFilter).filter(checkbox => checkbox.checked).map(checkbox => checkbox.value);
+    const selectedNoc = Array.from(nocFilter).filter(checkbox => checkbox.checked).map(checkbox => checkbox.value);
     const hour = parseInt(hourSlider.value);
     
-    console.log('선택된 필터:', { selectedTypes, selectedCats, hour });
+    console.log('선택된 필터:', { selectedTypes, selectedCats, selectedAmt, selectedNoc, hour });
   
     // 이전 마커 제거
     violationMarkers.forEach(m => map.removeLayer(m));
     facilityMarkers.forEach(m => map.removeLayer(m));
     violationMarkers = [];
     facilityMarkers = [];
+    
+    // 기존 GI Score 마커 제거
+    if (window.giScoreMarkers) {
+      window.giScoreMarkers.forEach(m => map.removeLayer(m));
+    }
+    window.giScoreMarkers = [];
   
     // 단속 시각화
     if (violations && violations.length > 0) {
@@ -273,10 +704,11 @@
         const fillOpacity = 0.2 + intensity * 0.8; // 0.2 ~ 1.0 범위
         
         const marker = L.circleMarker([d.lat, d.lon], {
+          pane: 'violationPane', // 추가!
           radius: radius, // 크기 고정
           fillColor: color,
           color: color,
-          weight: 1.5, // 테두리 두께
+          weight: 0, // 테두리 두께
           opacity: 1,
           fillOpacity: fillOpacity // 색상 진하기만 조절
         }).addTo(map);
@@ -296,63 +728,326 @@
   
     // 상권 시각화
     if (facilities && facilities.length > 0) {
-      facilities.forEach(d => {
-        // "없음" 옵션이 선택된 경우 처리
-        if (selectedCats.includes("없음")) {
-          // 모든 카테고리가 0인 경우 "없음"으로 표시
-          const hasAnyCategory = selectedCats.filter(cat => cat !== "없음").some(cat => d[cat] && d[cat] > 0);
-          if (!hasAnyCategory) {
-            const marker = L.circleMarker([d.lat, d.lng], {
-              radius: 8,
-              fillColor: "gray",
-              color: "gray",
-              weight: 1,
-              opacity: 1,
-              fillOpacity: 0.3
-            }).addTo(map);
-            
-            marker.bindPopup(`
-              <strong>상권 없음</strong><br>
-              도로: ${d.road}<br>
-              모든 카테고리: 0개<br>
-              위치: ${d.lat.toFixed(4)}, ${d.lng.toFixed(4)}
-            `);
-            
-            facilityMarkers.push(marker);
+      console.log('상권 데이터 처리 시작, 총 개수:', facilities.length);
+      console.log('선택된 카테고리:', selectedCats);
+      
+      let processedCount = 0;
+      let markerCount = 0;
+      
+      // "없음"만 선택된 경우 상권 마커를 표시하지 않음
+      if (selectedCats.length === 1 && selectedCats[0] === "없음") {
+        console.log('"없음"만 선택됨 - 상권 마커 표시 안함');
+        // return 제거 - GI Score 렌더링을 위해 계속 진행
+      } else {
+        // 일반 상권 마커 처리
+        facilities.forEach((d, index) => {
+          processedCount++;
+          
+          // "없음" 옵션이 선택된 경우 처리
+          if (selectedCats.includes("없음")) {
+            // 모든 카테고리가 0인 경우 "없음"으로 표시
+            const hasAnyCategory = selectedCats.filter(cat => cat !== "없음").some(cat => d[cat] && d[cat] > 0);
+            if (!hasAnyCategory) {
+              const size = 0.0015; // 동일한 크기
+              
+              const marker = L.rectangle([
+                [d.lat - size/2, d.lng - size/2], 
+                [d.lat + size/2, d.lng + size/2]
+              ], {
+                pane: 'facilityPane', // 추가!
+                fillColor: "gray",
+                color: "gray",
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.3
+              }).addTo(map);
+              
+              marker.bindPopup(`
+                <strong>상권 미개발 지역</strong><br>
+                위치: ${d.lat.toFixed(4)}, ${d.lng.toFixed(4)}<br>
+                <small>모든 카테고리: 0개</small>
+              `);
+              
+              facilityMarkers.push(marker);
+              markerCount++;
+            }
           }
-        }
-        
-        // 일반 카테고리 처리
-        selectedCats.filter(cat => cat !== "없음").forEach(category => {
-          if (d[category] && d[category] > 0) {
-            const color = categoryColors[category] || "gray";
-            const radius = 10 + Math.min(d[category] / 10, 20);
-            
-            const marker = L.circleMarker([d.lat, d.lng], {
-              radius: radius,
-              fillColor: color,
-              color: color,
-              weight: 1,
-              opacity: 1,
-              fillOpacity: 0.4
-            }).addTo(map);
-            
-            // 툴팁 추가
-            marker.bindPopup(`
-              <strong>${category}</strong><br>
-              도로: ${d.road}<br>
-              개수: ${d[category]}개<br>
-              위치: ${d.lat.toFixed(4)}, ${d.lng.toFixed(4)}
-            `);
-            
-            facilityMarkers.push(marker);
+          
+          // 일반 카테고리 처리
+          selectedCats.filter(cat => cat !== "없음").forEach(category => {
+            if (d[category] && d[category] > 0) {
+              const color = categoryColors[category] || "gray";
+              // 크기는 고정, 색상 진하기만 개수에 따라 변화
+              const size = 0.0015; // 겹치지 않되 떨어지지 않는 크기
+              
+              // 상권별 맞춤형 투명도 세분화
+              let fillOpacity;
+              
+              if (category === "음식점") {
+                // 음식점: 462개 최대 → 8단계
+                if (d[category] <= 50) fillOpacity = 0.2;      // 1-50개
+                else if (d[category] <= 100) fillOpacity = 0.3; // 51-100개
+                else if (d[category] <= 150) fillOpacity = 0.4; // 101-150개
+                else if (d[category] <= 200) fillOpacity = 0.5; // 151-200개
+                else if (d[category] <= 250) fillOpacity = 0.6; // 201-250개
+                else if (d[category] <= 350) fillOpacity = 0.7; // 251-350개
+                else if (d[category] <= 400) fillOpacity = 0.8; // 351-400개
+                else fillOpacity = 0.9;                          // 401-462개
+                
+              } else if (category === "카페") {
+                // 카페: 118개 최대 → 6단계
+                if (d[category] <= 20) fillOpacity = 0.2;      // 1-20개
+                else if (d[category] <= 40) fillOpacity = 0.3;  // 21-40개
+                else if (d[category] <= 60) fillOpacity = 0.5;  // 41-60개
+                else if (d[category] <= 80) fillOpacity = 0.6;  // 61-80개
+                else if (d[category] <= 100) fillOpacity = 0.7; // 81-100개
+                else fillOpacity = 0.8;                          // 101-118개
+                
+              } else if (category === "은행") {
+                // 은행: 28개 최대 → 5단계
+                if (d[category] <= 5) fillOpacity = 0.2;       // 1-5개
+                else if (d[category] <= 10) fillOpacity = 0.3;  // 6-10개
+                else if (d[category] <= 15) fillOpacity = 0.4;  // 11-15개
+                else if (d[category] <= 20) fillOpacity = 0.5;  // 16-20개
+                else fillOpacity = 0.6;                          // 21-28개
+                
+              } else if (category === "병원") {
+                // 병원: 98개 최대 → 6단계
+                if (d[category] <= 15) fillOpacity = 0.2;      // 1-15개
+                else if (d[category] <= 30) fillOpacity = 0.3;  // 16-30개
+                else if (d[category] <= 45) fillOpacity = 0.4;  // 31-45개
+                else if (d[category] <= 60) fillOpacity = 0.5;  // 46-60개
+                else if (d[category] <= 80) fillOpacity = 0.6;  // 61-80개
+                else fillOpacity = 0.7;                          // 81-98개
+                
+              } else if (category === "관공서") {
+                // 관공서: 6개 최대 → 2단계 (최고 0.6)
+                if (d[category] <= 3) fillOpacity = 0.3;       // 1-3개
+                else fillOpacity = 0.6;                          // 4-6개
+                
+              } else if (category === "주차장") {
+                // 주차장: 45개 최대 → 5단계
+                if (d[category] <= 8) fillOpacity = 0.2;       // 1-8개
+                else if (d[category] <= 15) fillOpacity = 0.3;  // 9-15개
+                else if (d[category] <= 25) fillOpacity = 0.4;  // 16-25개
+                else if (d[category] <= 35) fillOpacity = 0.5;  // 26-35개
+                else fillOpacity = 0.6;                          // 36-45개
+                
+              } else if (category === "총합") {
+                // 총합: 716개 최대 → 8단계
+                if (d[category] <= 50) fillOpacity = 0.2;      // 1-50개
+                else if (d[category] <= 100) fillOpacity = 0.3; // 51-100개
+                else if (d[category] <= 150) fillOpacity = 0.4; // 101-150개
+                else if (d[category] <= 200) fillOpacity = 0.5; // 151-200개
+                else if (d[category] <= 300) fillOpacity = 0.6; // 201-300개
+                else if (d[category] <= 400) fillOpacity = 0.7; // 301-400개
+                else if (d[category] <= 500) fillOpacity = 0.8; // 401-500개
+                else fillOpacity = 0.9;                          // 501-716개
+                
+              } else {
+                // 기타 카테고리: 기본값
+                fillOpacity = 0.5;
+              }
+              
+              const marker = L.rectangle([
+                [d.lat - size/2, d.lng - size/2], 
+                [d.lat + size/2, d.lng + size/2]
+              ], {
+                fillColor: color,
+                color: color,
+                weight: 0,
+                opacity: 1,
+                fillOpacity: fillOpacity // 상권별 맞춤형 투명도
+              }).addTo(map);
+              
+              // 툴팁 추가
+              marker.bindPopup(`
+                <strong>${category} ${d[category]}개</strong><br>
+                위치: ${d.lat.toFixed(4)}, ${d.lng.toFixed(4)}<br>
+                <small>총 상권: ${d.총합}개</small>
+              `);
+              
+              facilityMarkers.push(marker);
+              markerCount++;
+            }
+          });
+          
+          // 10개마다 진행상황 로그
+          if (processedCount % 10 === 0) {
+            console.log(`처리 진행: ${processedCount}/${facilities.length}, 마커 생성: ${markerCount}개`);
           }
         });
-      });
-      console.log('상권 마커 생성:', facilityMarkers.length);
+        
+        console.log('상권 데이터 처리 완료');
+        console.log('총 처리된 데이터:', processedCount);
+        console.log('생성된 마커:', markerCount);
+        console.log('facilityMarkers 배열 길이:', facilityMarkers.length);
+      }
     }
     
+    // GI Score 마커 렌더링
+    renderGIScores(giScores, selectedAmt, selectedNoc);
+    
     console.log('렌더링 완료');
+  }
+  
+  // GI Score 마커 렌더링 함수 추가
+  function renderGIScores(giScores, selectedAmt, selectedNoc) {
+    console.log('GI Score 마커 렌더링 시작...');
+    
+    if (!giScores || giScores.length === 0) {
+      console.log('GI Score 데이터가 없습니다.');
+      return;
+    }
+    
+    let markerCount = 0;
+    
+    giScores.forEach((d, index) => {
+      // AMT Z-Score 처리
+      selectedAmt.forEach(giType => {
+        if (d[giType] !== undefined) {
+          const value = d[giType];
+          
+          // 단순화된 색상: 빨강(Hot) vs 진한 파랑(Cold)
+          let color, fillOpacity;
+          
+          if (value >= 0) {
+            // Hot (빨강): 값이 클수록 진하게
+            color = '#d73027'; // 빨강
+            fillOpacity = 0.2 + Math.min(0.8, value / 2); // 0.2 ~ 1.0
+          } else {
+            // Cold (진한 파랑): 값이 작을수록 진하게
+            color = '#1e3a8a'; // 진한 파랑
+            fillOpacity = 0.2 + Math.min(0.8, Math.abs(value) / 2); // 0.2 ~ 1.0
+          }
+          
+          // 정삼각형 모양 마커 생성
+          const size = 0.001; // 삼각형 크기
+          const height = size * Math.sqrt(3) / 2; // 정삼각형 높이
+          const marker = L.polygon([
+            [d.lat + height, d.lon], // 상단 꼭지점
+            [d.lat - height/2, d.lon - size/2], // 좌하단 꼭지점
+            [d.lat - height/2, d.lon + size/2]  // 우하단 꼭지점
+          ], {
+            pane: 'facilityPane',
+            fillColor: color,
+            color: color,
+            weight: 1,
+            opacity: 0.8,
+            fillOpacity: fillOpacity
+          }).addTo(map);
+          
+           // 툴팁에 핫스팟/콜드스팟 분석 정보 표시 (필터에 따라 동적 변경)
+           const selectedAmt = Array.from(amtFilter).filter(checkbox => checkbox.checked).map(checkbox => checkbox.value);
+           const selectedNoc = Array.from(nocFilter).filter(checkbox => checkbox.checked).map(checkbox => checkbox.value);
+           
+           let scoreInfo = '';
+           let labelInfo = '';
+           
+           if (selectedAmt.includes('amt_z')) {
+             scoreInfo += `<small><strong>AMT Z-Score</strong></small><br>값: ${d.amt_z ? d.amt_z.toFixed(3) : 'N/A'}<br>`;
+             labelInfo += `AMT 라벨: ${d.amt_label || 'N/A'}<br>`;
+           }
+           if (selectedNoc.includes('noc_z')) {
+             scoreInfo += `<small><strong>NOC Z-Score</strong></small><br>값: ${value.toFixed(3)}<br>`;
+             labelInfo += `NOC 라벨: ${d.noc_label || 'N/A'}<br>`;
+           }
+           
+           marker.bindPopup(`
+             <strong>핫스팟/콜드스팟 분석</strong><br>
+             ${scoreInfo}
+             ${labelInfo}
+             위치: ${d.lat.toFixed(4)}, ${d.lon.toFixed(4)}
+           `);
+          
+          // 디버깅: 마커 생성 시 데이터 확인
+          console.log('AMT 마커 생성:', {
+            lat: d.lat,
+            lon: d.lon,
+            value: value,
+            noc_label: d.noc_label,
+            amt_label: d.amt_label,
+            'noc_label 타입': typeof d.noc_label,
+            'noc_label 길이': d.noc_label ? d.noc_label.length : 'undefined'
+          });
+          
+          window.giScoreMarkers.push(marker);
+          markerCount++;
+        }
+      });
+      
+      // NOC Z-Score 처리
+      selectedNoc.forEach(giType => {
+        if (d[giType] !== undefined) {
+          const value = d[giType];
+          
+          // 단순화된 색상: 빨강(Hot) vs 진한 파랑(Cold)
+          let color, fillOpacity;
+          
+          if (value >= 0) {
+            // Hot (빨강): 값이 클수록 진하게
+            color = '#d73027'; // 빨강
+            fillOpacity = 0.2 + Math.min(0.8, value / 2); // 0.2 ~ 1.0
+          } else {
+            // Cold (진한 파랑): 값이 작을수록 진하게
+            color = '#1e3a8a'; // 진한 파랑
+            fillOpacity = 0.2 + Math.min(0.8, Math.abs(value) / 2); // 0.2 ~ 1.0
+          }
+          
+          // 정삼각형 모양 마커 생성
+          const size = 0.001; // 삼각형 크기
+          const height = size * Math.sqrt(3) / 2; // 정삼각형 높이
+          const marker = L.polygon([
+            [d.lat + height, d.lon], // 상단 꼭지점
+            [d.lat - height/2, d.lon - size/2], // 좌하단 꼭지점
+            [d.lat - height/2, d.lon + size/2]  // 우하단 꼭지점
+          ], {
+            pane: 'facilityPane',
+            fillColor: color,
+            color: color,
+            weight: 1,
+            opacity: 0.8,
+            fillOpacity: fillOpacity
+          }).addTo(map);
+          
+          // 툴팁에 핫스팟/콜드스팟 분석 정보 표시 (필터에 따라 동적 변경)
+          const selectedAmt = Array.from(amtFilter).filter(checkbox => checkbox.checked).map(checkbox => checkbox.value);
+          const selectedNoc = Array.from(nocFilter).filter(checkbox => checkbox.checked).map(checkbox => checkbox.value);
+          
+          let labelInfo = '';
+          if (selectedAmt.includes('amt_z')) {
+            labelInfo += `AMT 라벨: ${d.amt_label || 'N/A'}<br>`;
+          }
+          if (selectedNoc.includes('noc_z')) {
+            labelInfo += `NOC 라벨: ${d.noc_label || 'N/A'}<br>`;
+          }
+          
+          marker.bindPopup(`
+            <strong>핫스팟/콜드스팟 분석</strong><br>
+            <small><strong>NOC Z-Score</strong></small><br>
+            값: ${value.toFixed(3)}<br>
+            ${labelInfo}
+            위치: ${d.lat.toFixed(4)}, ${d.lon.toFixed(4)}
+          `);
+          
+          // 디버깅: 마커 생성 시 데이터 확인
+          console.log('NOC 마커 생성:', {
+            lat: d.lat,
+            lon: d.lon,
+            value: value,
+            noc_label: d.noc_label,
+            amt_label: d.amt_label,
+            'noc_label 타입': typeof d.noc_label,
+            'noc_label 길이': d.noc_label ? d.noc_label.length : 'undefined'
+          });
+          
+          window.giScoreMarkers.push(marker);
+          markerCount++;
+        }
+      });
+    });
+    
+    console.log('GI Score 마커 생성 완료:', markerCount, '개');
   }
 </script>
 
