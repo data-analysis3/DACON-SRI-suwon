@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>주차 단속 핫스팟 × 매출 Gi* — 단순 겹치기</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body, #map { height:100%; margin:0; }
+    .legend {
+      position:absolute; z-index:10; bottom:16px; left:12px;
+      background:rgba(255,255,255,0.96); padding:8px 10px; border-radius:10px;
+      font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif; font-size:12px;
+      box-shadow:0 2px 12px rgba(0,0,0,0.12);
+    }
+    .legend-bar{ width:220px; height:10px; border-radius:4px; margin:6px 0 4px;
+      background:linear-gradient(90deg,#2c7bb6,#f7f7f7,#d7191c); }
+    .err{ position:absolute; z-index:10; top:10px; right:10px;
+      background:#fdecea; color:#b71c1c; border:1px solid #f4b9b9;
+      padding:8px 10px; border-radius:10px; font-size:12px; display:none; }
+  </style>
+  <!-- services 불필요: 순수 지도만 사용 -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=0866f9fe32c30ae1f84b90e5c6c9e558"></script>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="err" class="err"></div>
+
+  <div class="legend">
+    <div><b>Gi* Z-score</b> (매출/단속 공통)</div>
+    <div class="legend-bar"></div>
+    <div style="display:flex; gap:10px;">
+      <span>파랑=Cold</span><span>회색=비유의</span><span>빨강=Hot</span>
+    </div>
+  </div>
+
+<script>
+(function(){
+  // ===== 파일 경로 (그대로 겹치기) =====
+  const SALES_GEOJSON = "suwon_hotspots_gi_unified.geojson"; // Point GeoJSON, 속성에 amt_z, amt_p, noc_z, noc_p
+  const ENF_FILES = [
+    "hotspots_period_morning_hot.json",
+    "hotspots_period_lunch_hot.json",
+    "hotspots_period_afternoon_hot.json",
+    "hotspots_period_evening_hot.json"
+  ];
+
+  // ===== 지도 =====
+  const map = new kakao.maps.Map(document.getElementById('map'), {
+    center: new kakao.maps.LatLng(37.27,127.01), level:6
+  });
+  const errBox = document.getElementById('err');
+  function error(msg){ errBox.textContent = msg; errBox.style.display='block'; setTimeout(()=>errBox.style.display='none', 4000); }
+
+  // ===== 유틸(색/크기 매핑: z,p만 사용) =====
+  function hexToRgb(hex){ const h=hex.replace('#',''); return {r:parseInt(h.slice(0,2),16), g:parseInt(h.slice(2,4),16), b:parseInt(h.slice(4,6),16)}; }
+  function lerpColor(a,b,t){ const ca=hexToRgb(a), cb=hexToRgb(b);
+    const r=Math.round(ca.r+(cb.r-ca.r)*t), g=Math.round(ca.g+(cb.g-ca.g)*t), bl=Math.round(ca.b+(cb.b-ca.b)*t);
+    return `rgb(${r},${g},${bl})`; }
+  function colorFromZP(z, p){
+    if (!Number.isFinite(z)) return '#cccccc';
+    if (Number.isFinite(p) && p > 0.05) return '#bbbbbb'; // 비유의 → 회색
+    const az = Math.min(Math.abs(z)/3, 1); // |z|≈3까지 스케일
+    if (z >= 0) return lerpColor('#f7f7f7', '#d7191c', az); // 회색→빨강
+    return lerpColor('#f7f7f7', '#2c7bb6', az);            // 회색→파랑
+  }
+  function radiusPxFromZ(z){
+    const az = Math.min(Math.abs(Number(z)||0), 4);  // |z| cap=4
+    return 6 + 3*az; // 6~18px
+  }
+  function makeDot(lat, lon, color, rpx){
+    const el = document.createElement('div');
+    el.style.width = `${rpx*2}px`;
+    el.style.height = `${rpx*2}px`;
+    el.style.borderRadius = '50%';
+    el.style.background = color;
+    el.style.opacity = '0.8';
+    el.style.border = '1px solid rgba(0,0,0,0.25)';
+    el.style.boxSizing = 'border-box';
+    const ov = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(lat, lon),
+      content: el,
+      xAnchor: 0.5, yAnchor: 0.5
+    });
+    return ov;
+  }
+
+  // ===== 겹치기: 매출(AMT/NOC 모두 그림) + 단속(모든 시간대 Hot) =====
+  const overlays = [];
+
+  function fitBounds(points){
+    if (!points.length) return;
+    const b = new kakao.maps.LatLngBounds();
+    points.forEach(p => b.extend(new kakao.maps.LatLng(p[0], p[1])));
+    map.setBounds(b);
+  }
+
+  // 매출: AMT/NOC 둘 다 그린다 (겹침 허용)
+  function drawSales(features){
+    const pts = [];
+    for (const f of features){
+      const p = f.properties || {};
+      const coords = (f.geometry && f.geometry.coordinates) || [NaN,NaN];
+      const lat = Number(p.lat ?? coords[1]);
+      const lon = Number(p.lon ?? coords[0]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+      // AMT 점
+      const cA = colorFromZP(Number(p.amt_z), Number(p.amt_p));
+      const rA = radiusPxFromZ(Number(p.amt_z));
+      const ovA = makeDot(lat, lon, cA, rA);
+      ovA.setMap(map); overlays.push(ovA);
+
+      // NOC 점
+      const cN = colorFromZP(Number(p.noc_z), Number(p.noc_p));
+      const rN = radiusPxFromZ(Number(p.noc_z));
+      const ovN = makeDot(lat, lon, cN, rN);
+      ovN.setMap(map); overlays.push(ovN);
+
+      pts.push([lat,lon]);
+    }
+    return pts;
+  }
+
+  // 단속: 빨강 계열(Hot만)
+  function colorEnfByZ(z){
+    if (!Number.isFinite(z)) return '#e57373';
+    if (z >= 2.58) return '#b71c1c';
+    if (z >= 1.96) return '#d32f2f';
+    if (z >= 1.65) return '#ef5350';
+    return '#ffcdd2';
+  }
+  function drawEnf(arr){
+    const pts = [];
+    for (const d of arr){
+      const lat = Number(d.lat), lon = Number(d.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+      const z = Number(d.GiZ);
+      const ov = makeDot(lat, lon, colorEnfByZ(z), radiusPxFromZ(Math.max(0,z)));
+      ov.setMap(map); overlays.push(ov);
+      pts.push([lat,lon]);
+    }
+    return pts;
+  }
+
+  // ===== 데이터 로드 & 렌더 =====
+  Promise.all([
+    fetch(SALES_GEOJSON).then(r=>{ if(!r.ok) throw new Error('sales '+r.status); return r.json(); }),
+    ...ENF_FILES.map(f => fetch(f).then(r=>{ if(!r.ok) throw new Error(f+' '+r.status); return r.json(); }).catch(()=>[]))
+  ])
+  .then(([geo, ...enfArrays])=>{
+    const feats = Array.isArray(geo.features) ? geo.features : [];
+    const salesPts = drawSales(feats);
+    const enfPtsAll = [];
+    enfArrays.forEach(arr => { if(Array.isArray(arr)) enfPtsAll.push(...drawEnf(arr)); });
+    fitBounds([...salesPts, ...enfPtsAll]);
+  })
+  .catch(err => { console.error(err); error('파일 로드 실패: '+ err.message); });
+
+})();
+</script>
+</body>
+</html>
