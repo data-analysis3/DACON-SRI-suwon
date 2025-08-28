@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>주소별 매출 시각화 (평균/합계)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body, #map {height:100%; margin:0;}
+    .panel {
+      position:absolute; z-index:5; top:16px; left:16px;
+      background:white; padding:8px 10px; border-radius:8px;
+      box-shadow:0 2px 8px rgba(0,0,0,.15); font:12px/1.4 system-ui, 'Noto Sans KR', sans-serif;
+      display:flex; gap:8px; align-items:center;
+    }
+  </style>
+  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey="></script>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="panel">
+    <label>지표:
+      <select id="metricSel">
+        <option value="mean">평균 매출(AMT_mean)</option>
+        <option value="sum">합계 매출(AMT_sum)</option>
+      </select>
+    </label>
+  </div>
+
+  <script>
+    const map = new kakao.maps.Map(document.getElementById('map'), {
+      center: new kakao.maps.LatLng(37.4, 127.0),  // 경기권 대략
+      level: 8
+    });
+
+    let overlays = [];
+    function clearMap(){ overlays.forEach(o=>o.setMap(null)); overlays = []; }
+
+    // 파일/컬럼 매핑
+    const sources = {
+        mean: { file: "sales_suwon_mean.geojson", valueCol: "AMT_mean" },
+        sum:  { file: "sales_suwon_sum.geojson",  valueCol: "AMT_sum"  }
+        };
+
+
+    // 동적 스케일링: 데이터 전체에서 min/max 산출 → 원 크기/색 강도에 반영
+    function draw(file, valueCol){
+      clearMap();
+      fetch(file).then(r=>r.json()).then(geo=>{
+        // 1) min/max 구하기
+        let vals = geo.features.map(f => Number(f.properties[valueCol] || 0)).filter(v => isFinite(v) && v>0);
+        if(vals.length === 0){ alert("값이 없습니다: " + valueCol); return; }
+        const vmin = Math.min(...vals), vmax = Math.max(...vals);
+
+        // 스케일 함수
+        const sizeOf = v => {
+          const s = Math.sqrt(v) / Math.sqrt(vmax); // 0~1 정규화
+          return 6 + s * 44; // 6~50 px
+        };
+        const colorOf = v => {
+          const s = (v - vmin) / (vmax - vmin + 1e-9); // 0~1
+          const alpha = 0.25 + 0.55 * s;               // 0.25~0.8
+          return `rgba(200,0,0,${alpha})`;
+        };
+
+        // 2) 그리기
+        geo.features.forEach(f=>{
+          const [lon, lat] = f.geometry.coordinates;
+          const props = f.properties;
+          const v = Number(props[valueCol] || 0);
+
+          const el = document.createElement("div");
+          el.style.width  = sizeOf(v) + "px";
+          el.style.height = sizeOf(v) + "px";
+          el.style.borderRadius = "50%";
+          el.style.background = colorOf(v);
+          el.style.border = "1px solid rgba(0,0,0,.3)";
+          el.title = `${valueCol}: ${Math.round(v).toLocaleString()}  (병합건수 n=${props.n || "?"})`;
+
+          const overlay = new kakao.maps.CustomOverlay({
+            position: new kakao.maps.LatLng(lat, lon),
+            content: el
+          });
+          overlay.setMap(map);
+          overlays.push(overlay);
+        });
+      }).catch(e=>{
+        console.error(e);
+        alert("GeoJSON 로딩 실패: " + file);
+      });
+    }
+
+    // 초기: 평균 기준
+    draw(sources.mean.file, sources.mean.valueCol);
+
+    document.getElementById("metricSel").addEventListener("change", e=>{
+      const key = e.target.value;
+      draw(sources[key].file, sources[key].valueCol);
+    });
+  </script>
+</body>
+</html>
